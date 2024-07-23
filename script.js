@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Fetch initial vote counts from the server
     const fetchVoteCounts = async () => {
-        const response = await fetch('getVotes');
+        const response = await fetch('api/getVotes.js');
         const data = await response.json();
         updateVoteCounts(data.votes);
     };
@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const voteValue = selectedOption.value;
 
-        const response = await fetch('vote', {
+        const response = await fetch('api/vote.js', {
             method: 'POST',
             body: JSON.stringify({ candidate: voteValue }),
             headers: {
