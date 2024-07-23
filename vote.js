@@ -1,11 +1,11 @@
+import { Pool } from 'pg';
+import dotenv from 'dotenv';
 
-import { Client } from 'pg';
+dotenv.config();
 
-const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
-    }
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
 export default async (req, res) => {
@@ -17,27 +17,31 @@ export default async (req, res) => {
     const { candidate } = req.body;
     const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
-    await client.connect();
+    try {
+        await pool.connect();
 
-    // Check if IP address has already voted
-    const checkVote = await client.query('SELECT * FROM votes WHERE ip_address = $1', [ipAddress]);
-    if (checkVote.rows.length > 0) {
-        res.status(403).json({ success: false, message: 'Already voted' });
-        await client.end();
-        return;
+        // Check if IP address has already voted
+        const checkVote = await pool.query('SELECT * FROM votes WHERE ip_address = $1', [ipAddress]);
+        if (checkVote.rows.length > 0) {
+            res.status(403).json({ success: false, message: 'Already voted' });
+            return;
+        }
+
+        // Insert vote and IP address into database
+        await pool.query('INSERT INTO votes (candidate, ip_address) VALUES ($1, $2)', [candidate, ipAddress]);
+
+        // Get updated vote counts
+        const result = await pool.query('SELECT candidate, COUNT(*) as count FROM votes GROUP BY candidate');
+        const votes = result.rows.reduce((acc, row) => {
+            acc[row.candidate] = row.count;
+            return acc;
+        }, {});
+
+        res.status(200).json({ success: true, votes });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    } finally {
+        await pool.end();
     }
-
-    // Insert vote and IP address into database
-    await client.query('INSERT INTO votes (candidate, ip_address) VALUES ($1, $2)', [candidate, ipAddress]);
-
-    // Get updated vote counts
-    const result = await client.query('SELECT candidate, COUNT(*) as count FROM votes GROUP BY candidate');
-    const votes = result.rows.reduce((acc, row) => {
-        acc[row.candidate] = row.count;
-        return acc;
-    }, {});
-
-    await client.end();
-
-    res.status(200).json({ success: true, votes });
 };
