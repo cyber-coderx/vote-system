@@ -1,10 +1,11 @@
-import { Client } from 'pg';
+import { Pool } from 'pg';
+import dotenv from 'dotenv';
 
-const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
-    }
+dotenv.config();
+
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
 export default async (req, res) => {
@@ -13,16 +14,21 @@ export default async (req, res) => {
         return;
     }
 
-    await client.connect();
+    try {
+        await pool.connect();
 
-    // Get vote counts
-    const result = await client.query('SELECT candidate, COUNT(*) as count FROM votes GROUP BY candidate');
-    const votes = result.rows.reduce((acc, row) => {
-        acc[row.candidate] = row.count;
-        return acc;
-    }, {});
+        // Get vote counts
+        const result = await pool.query('SELECT candidate, COUNT(*) as count FROM votes GROUP BY candidate');
+        const votes = result.rows.reduce((acc, row) => {
+            acc[row.candidate] = row.count;
+            return acc;
+        }, {});
 
-    await client.end();
-
-    res.status(200).json({ votes });
+        res.status(200).json({ votes });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    } finally {
+        await pool.end();
+    }
 };
