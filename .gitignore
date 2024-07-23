@@ -1,0 +1,15 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env.local
+
+# Log files
+*.log
+
+# Build directories
+.next/
+.vercel/
+
+# Other
+*.env
