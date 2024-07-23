@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "vote.js", "use": "@vercel/node" },
+    { "src": "getVotes.js", "use": "@vercel/node" },
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "styles.css", "use": "@vercel/static" },
+    { "src": "script.js", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/api/vote", "dest": "/vote.js" },
+    { "src": "/api/getVotes", "dest": "/getVotes.js" },
+    { "src": "/(.*)", "dest": "/$1" }
+  ]
+}
